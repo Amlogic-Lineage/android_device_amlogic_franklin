@@ -77,26 +77,6 @@ Only the three quirks included above are recognized at this point:
 
 <MediaCodecs>
     <Decoders>
-        <MediaCodec name="OMX.amlogic.dolby-vision.decoder.awesome" type="video/dolby-vision" >
-            <Limit name="size" min="64x64" max="3840x2160" />
-            <Limit name="alignment" value="2x2" />
-            <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="1" max="972000" />
-            <Limit name="bitrate" range="1-300000000" />
-            <Feature name="adaptive-playback" />
-            <Limit name="concurrent-instances" max="1" />
-        </MediaCodec>
-        <MediaCodec name="OMX.amlogic.dolby-vision.decoder.awesome.secure" type="video/dolby-vision" >
-            <Limit name="size" min="64x64" max="3840x2160" />
-            <Limit name="alignment" value="2x2" />
-            <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="1" max="972000" />
-            <Limit name="bitrate" range="1-300000000" />
-            <Feature name="adaptive-playback" />
-            <Feature name="secure-playback" required="true" />
-            <Feature name="tunneled-playback" />
-            <Limit name="concurrent-instances" max="1" />
-        </MediaCodec>
         <MediaCodec name="OMX.amlogic.hevc.decoder.awesome" type="video/hevc" >
             <Limit name="size" min="64x64" max="3840x2160" />
             <Limit name="alignment" value="2x2" />
@@ -114,7 +94,6 @@ Only the three quirks included above are recognized at this point:
             <Limit name="bitrate" range="1-300000000" />
             <Feature name="adaptive-playback" />
             <Feature name="secure-playback" required="true" />
-            <Feature name="tunneled-playback" />
 	    <Limit name="concurrent-instances" max="1" />
         </MediaCodec>
         <MediaCodec name="OMX.amlogic.avc.decoder.awesome" type="video/avc" >
@@ -124,6 +103,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="blocks-per-second" min="1" max="972000" />
             <Limit name="bitrate" range="1-300000000" />
             <Feature name="adaptive-playback" />
+            <Feature name="tunneled-playback" />
             <Limit name="concurrent-instances" max="9" />
         </MediaCodec>
         <MediaCodec name="OMX.amlogic.avc.decoder.awesome.secure" type="video/avc" >
@@ -135,16 +115,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="adaptive-playback" />
             <Feature name="secure-playback" required="true" />
 	    <Limit name="concurrent-instances" max="1" />
-        </MediaCodec>
-        <MediaCodec name="OMX.amlogic.avc.decoder.awesome.hdcp.secure" type="video/avc" >
-            <Limit name="size" min="64x64" max="1920x1080" />
-            <Limit name="alignment" value="2x2" />
-            <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="1" max="972000" />
-            <Limit name="bitrate" range="1-300000000" />
-            <Feature name="adaptive-playback" />
-            <Feature name="secure-playback" required="true" />
-        <Limit name="concurrent-instances" max="1" />
         </MediaCodec>
         <MediaCodec name="OMX.amlogic.mpeg4.decoder.awesome" type="video/mp4v-es" >
             <Limit name="size" min="64x64" max="1920x1088" />
@@ -180,6 +150,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="blocks-per-second" min="1" max="972000" />
             <Limit name="bitrate" range="1-300000000" />
             <Feature name="adaptive-playback" />
+            <Feature name="tunneled-playback" />
 	    <Limit name="concurrent-instances" max="9" />
         </MediaCodec>
         <MediaCodec name="OMX.amlogic.vp9.decoder.awesome.secure" type="video/x-vnd.on2.vp9" >
@@ -275,7 +246,7 @@ Only the three quirks included above are recognized at this point:
         <MediaCodec name="OMX.google.flac.encoder" type="audio/flac" />
 
         <MediaCodec name="OMX.amlogic.video.encoder.hevc" type="video/hevc" >
-            <Limit name="size" min="352x288" max="1920x1088" />
+            <Limit name="size" min="176x144" max="1920x1088" />
             <Limit name="alignment" value="16x16" />
             <Limit name="block-size" value="16x16" />
             <Limit name="blocks-per-second" min="1" max="244800" />

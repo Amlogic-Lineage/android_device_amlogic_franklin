@@ -48,7 +48,7 @@ TARGET_NO_RADIOIMAGE := true
 
 TARGET_BOARD_PLATFORM := franklin
 TARGET_BOOTLOADER_BOARD_NAME := franklin
-BOARD_BLUETOOTH_BDROID_BUILDCFG_INCLUDE_DIR := device/khadas/franklin/btbuild
+
 # Allow passing `--second` to mkbootimg via 2ndbootloader.
 TARGET_BOOTLOADER_IS_2ND := true
 
@@ -59,7 +59,6 @@ MAX_VIRTUAL_DISPLAY_DIMENSION := 1920
 TARGET_APP_LAYER_USE_CONTINUOUS_BUFFER := true
 HWC_ENABLE_PRIMARY_HOTPLUG := true
 ENABLE_PRIMARY_DISPLAY_HOTPLUG := true
-
 
 #MESONHWC CONFIG
 USE_HWC2 := true
@@ -111,12 +110,12 @@ BOARD_BOOTIMAGE_PARTITION_SIZE := 16777216
 
 ifeq ($(ANDROID_BUILD_TYPE), 64)
 BOARD_SYSTEMIMAGE_PARTITION_SIZE := 1551892480
-BOARD_VENDORIMAGE_PARTITION_SIZE := 335544320
+BOARD_VENDORIMAGE_PARTITION_SIZE := 268435456
 BOARD_ODMIMAGE_PARTITION_SIZE := 134217728
 BOARD_PRODUCTIMAGE_PARTITION_SIZE := 134217728
 else
 BOARD_SYSTEMIMAGE_PARTITION_SIZE := 1342177280
-BOARD_VENDORIMAGE_PARTITION_SIZE := 335544320
+BOARD_VENDORIMAGE_PARTITION_SIZE := 268435456
 BOARD_ODMIMAGE_PARTITION_SIZE := 134217728
 BOARD_PRODUCTIMAGE_PARTITION_SIZE := 134217728
 endif
@@ -127,6 +126,10 @@ BOARD_DTBOIMG_PARTITION_SIZE := 8388608
 
 BOARD_KERNEL_CMDLINE += androidboot.dtbo_idx=0
 
+ifneq ($(USE_USB_AS_HOST),true)
+BOARD_KERNEL_CMDLINE += --cmdline "otg_device=1"
+endif
+
 ifeq ($(BOARD_BUILD_DISABLED_VBMETAIMAGE), true)
 ifeq ($(BOARD_BUILD_SYSTEM_ROOT_IMAGE), true)
 ifneq ($(AB_OTA_UPDATER),true)
@@ -136,12 +139,12 @@ endif
 endif
 
 TARGET_SUPPORT_USB_BURNING_V2 := true
-TARGET_AMLOGIC_RES_PACKAGE := device/khadas/$(PRODUCT_DIR)/logo_img_files
+TARGET_AMLOGIC_RES_PACKAGE := device/amlogic/$(PRODUCT_DIR)/logo_img_files
 
 ifeq ($(BOARD_BUILD_SYSTEM_ROOT_IMAGE), true)
-TARGET_RECOVERY_FSTAB := device/khadas/$(PRODUCT_DIR)/recovery/recovery_system.fstab
+TARGET_RECOVERY_FSTAB := device/amlogic/$(PRODUCT_DIR)/recovery/recovery_system.fstab
 else
-TARGET_RECOVERY_FSTAB := device/khadas/$(PRODUCT_DIR)/recovery/recovery.fstab
+TARGET_RECOVERY_FSTAB := device/amlogic/$(PRODUCT_DIR)/recovery/recovery.fstab
 endif
 
 #BOARD_HAL_STATIC_LIBRARIES := libhealthd.mboxdefault
@@ -153,7 +156,7 @@ BOARD_KERNEL_OFFSET := 0x1080000
 
 BOARD_USES_GENERIC_AUDIO := false
 BOARD_USES_ALSA_AUDIO := true
-TARGET_RELEASETOOLS_EXTENSIONS := device/khadas/common
+TARGET_RELEASETOOLS_EXTENSIONS := device/amlogic/common
 TARGET_USE_BLOCK_BASE_UPGRADE := true
 TARGET_OTA_UPDATE_DTB := true
 #TARGET_RECOVERY_DISABLE_ADB_SIDELOAD := true
@@ -170,7 +173,7 @@ TARGET_RECOVERY_UPDATER_LIBS := libinstall_amlogic
 TARGET_RECOVERY_UPDATER_EXTRA_LIBS += libenv libsystemcontrol_static libsecurity libfdt
 endif
 
-include device/khadas/common/sepolicy.mk
+include device/amlogic/common/sepolicy.mk
 #MALLOC_IMPL := dlmalloc
 MALLOC_SVELTE := true
 
@@ -181,25 +184,10 @@ BOARD_PROPERTY_OVERRIDES_SPLIT_ENABLED := true
 PRODUCT_SHIPPING_API_LEVEL := 28
 TARGET_USES_MKE2FS := true
 
-ifneq ($(TARGET_BUILD_GOOGLE_ATV), true)
-DEVICE_MANIFEST_FILE := device/khadas/common/products/mbox/manifest/manifest_aosp.xml
-else
-DEVICE_MANIFEST_FILE := device/khadas/common/products/mbox/manifest/manifest_gtvs.xml
-endif
+DEVICE_MANIFEST_FILE := device/amlogic/$(PRODUCT_DIR)/manifest.xml
+#DEVICE_MATRIX_FILE   := device/amlogic/common/compatibility_matrix.xml
 
-AUTO_PATCH_AB := device/khadas/common/products/mbox/manifest/ab_update.sh
-ifeq ($(AB_OTA_UPDATER),true)
-$(shell ($(AUTO_PATCH_AB) $(DEVICE_MANIFEST_FILE)))
-endif
-#DEVICE_MATRIX_FILE   := device/khadas/common/compatibility_matrix.xml
-
+BOARD_HAS_ADTV := true
 BOARD_VNDK_VERSION := current
 BOARD_BOOTIMG_HEADER_VERSION := 1
 BOARD_INCLUDE_RECOVERY_DTBO := true
-
-###npu board config
-BOARD_NPU_SERVICE_ENABLE := true
-AUTO_PATCH_NPU := device/khadas/common/products/mbox/manifest/npu_update.sh
-ifeq ($(BOARD_NPU_SERVICE_ENABLE),true)
-$(shell ($(AUTO_PATCH_NPU) $(DEVICE_MANIFEST_FILE)))
-endif

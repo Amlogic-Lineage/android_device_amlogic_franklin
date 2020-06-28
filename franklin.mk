@@ -19,6 +19,13 @@
 
 PRODUCT_DIR := franklin
 
+PRODUCT_PROPERTY_OVERRIDES += \
+	ro.vendor.nrdp.modelgroup=u212
+
+# hdcp_tx22
+PRODUCT_COPY_FILES += \
+    device/amlogic/$(PRODUCT_DIR)/files/hdcp_tx22:$(TARGET_COPY_OUT_VENDOR)/bin/hdcp_tx22
+
 # Dynamic enable start/stop zygote_secondary in 64bits
 # and 32bit system, default closed
 #TARGET_DYNAMIC_ZYGOTE_SECONDARY_ENABLE := true
@@ -26,15 +33,16 @@ PRODUCT_DIR := franklin
 # Inherit from those products. Most specific first.
 ifeq ($(ANDROID_BUILD_TYPE), 64)
 ifeq ($(TARGET_DYNAMIC_ZYGOTE_SECONDARY_ENABLE), true)
-$(call inherit-product, device/khadas/common/dynamic_zygote_seondary/dynamic_zygote_64_bit.mk)
+$(call inherit-product, device/amlogic/common/dynamic_zygote_seondary/dynamic_zygote_64_bit.mk)
 else
 $(call inherit-product, build/target/product/core_64_bit.mk)
 endif
 endif
 
-$(call inherit-product, device/khadas/$(PRODUCT_DIR)/vendor_prop.mk)
-$(call inherit-product, device/khadas/common/products/mbox/product_mbox.mk)
-$(call inherit-product, device/khadas/$(PRODUCT_DIR)/device.mk)
+$(call inherit-product, device/amlogic/$(PRODUCT_DIR)/vendor_prop.mk)
+$(call inherit-product, device/amlogic/common/products/mbox/product_mbox.mk)
+$(call inherit-product, device/amlogic/$(PRODUCT_DIR)/device.mk)
+$(call inherit-product, device/amlogic/common/nts/nts.mk)
 $(call inherit-product-if-exists, vendor/google/products/gms.mk)
 #########################################################################
 #
@@ -76,17 +84,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
         ro.hdmi.set_menu_language=true \
         persist.sys.hdmi.keep_awake=false
 
-PRODUCT_PROPERTY_OVERRIDES += \
-        ro.build.display.id=VIM3L_Pie_$(shell date +%Y%m%d)
-
-PRODUCT_PROPERTY_OVERRIDES += \
-        persist.vendor.sys.cec.set_menu_language=false
-
 PRODUCT_NAME := franklin
 PRODUCT_DEVICE := franklin
-PRODUCT_BRAND := Droidlogic
+PRODUCT_BRAND := Amlogic
 PRODUCT_MODEL := franklin
-PRODUCT_MANUFACTURER := Droidlogic
+PRODUCT_MANUFACTURER := Amlogic
 
 TARGET_KERNEL_BUILT_FROM_SOURCE := true
 
@@ -94,12 +96,12 @@ PRODUCT_TYPE := mbox
 
 BOARD_AML_VENDOR_PATH := vendor/amlogic/common/
 BOARD_WIDEVINE_TA_PATH := vendor/amlogic/
-BOARD_AML_TDK_KEY_PATH := device/khadas/common/tdk_keys/
 
 WITH_LIBPLAYER_MODULE := false
 
 OTA_UP_PART_NUM_CHANGED := true
 
+BOARD_AML_TDK_KEY_PATH := device/amlogic/common/tdk_keys/
 #AB_OTA_UPDATER :=true
 BUILD_WITH_AVB := true
 
@@ -107,7 +109,7 @@ ifeq ($(BUILD_WITH_AVB),true)
 #BOARD_AVB_ENABLE := true
 BOARD_BUILD_DISABLED_VBMETAIMAGE := true
 BOARD_AVB_ALGORITHM := SHA256_RSA2048
-BOARD_AVB_KEY_PATH := device/khadas/common/security/testkey_rsa2048.pem
+BOARD_AVB_KEY_PATH := device/amlogic/common/security/testkey_rsa2048.pem
 BOARD_AVB_ROLLBACK_INDEX := 0
 endif
 
@@ -171,7 +173,28 @@ endif
 #########Support compiling out encrypted zip/aml_upgrade_package.img directly
 #PRODUCT_BUILD_SECURE_BOOT_IMAGE_DIRECTLY := true
 #PRODUCT_AML_SECURE_BOOT_VERSION3 := true
-ifeq ($(PRODUCT_AML_SECURE_BOOT_VERSION3),true)
+#PRODUCT_AML_SECURE_BOOT_VMX := true
+ifeq ($(PRODUCT_AML_SECURE_BOOT_VMX),true)
+PRODUCT_BUILD_SECURE_BOOT_IMAGE_DIRECTLY := true
+
+PRODUCT_AML_VMX_ARB_REE_VERSION := 0
+PRODUCT_AML_VMX_MARKETID := 0x1
+PRODUCT_AML_VMX_KEY_DIR := ultra-key-s905x2-$(PRODUCT_AML_VMX_MARKETID)
+
+PRODUCT_SIGNTOOL_FOR_VMX_DIR := ./bootloader/uboot-repo/fip/g12a/signing_tool_m9d2
+PRODUCT_AML_SECUREBOOT_VMX_KEY_PATH := $(PRODUCT_SIGNTOOL_FOR_VMX_DIR)/$(PRODUCT_AML_VMX_KEY_DIR)
+PRODUCT_AML_SECUREBOOT_SIGNTOOL_VMX := $(PRODUCT_SIGNTOOL_FOR_VMX_DIR)/sign-all.sh
+PRODUCT_AML_SECUREBOOT_SIGNIMAGE_VMX := $(PRODUCT_AML_SECUREBOOT_SIGNTOOL_VMX)  --sign-kernel \
+					-k  $(PRODUCT_AML_SECUREBOOT_VMX_KEY_PATH)/stbm.pem \
+					--aes2 $(PRODUCT_AML_SECUREBOOT_VMX_KEY_PATH)/stbm.aes2 \
+					-v $(PRODUCT_AML_VMX_ARB_REE_VERSION)
+
+PRODUCT_AML_SECUREBOOT_SIGNIMAGE_VMX_DTB := $(PRODUCT_AML_SECUREBOOT_SIGNTOOL_VMX)  --sign-dtb \
+					-k  $(PRODUCT_AML_SECUREBOOT_VMX_KEY_PATH)/stbm.pem \
+					--aes2 $(PRODUCT_AML_SECUREBOOT_VMX_KEY_PATH)/stbm.aes2 \
+					-v $(PRODUCT_AML_VMX_ARB_REE_VERSION)
+					
+else ifeq ($(PRODUCT_AML_SECURE_BOOT_VERSION3),true)
 PRODUCT_AML_SECUREBOOT_RSAKEY_DIR := ./bootloader/uboot-repo/bl33/board/amlogic/g12a_u212_v1/aml-key
 PRODUCT_AML_SECUREBOOT_AESKEY_DIR := ./bootloader/uboot-repo/bl33/board/amlogic/g12a_u212_v1/aml-key
 PRODUCT_SBV3_SIGBL_TOOL  := ./bootloader/uboot-repo/fip/stool/amlogic-sign-g12a.sh -s g12a
@@ -188,15 +211,7 @@ PRODUCT_AML_SECUREBOOT_SIGBIN	:= $(PRODUCT_AML_SECUREBOOT_SIGNTOOL) --binsig \
 					--amluserkey $(PRODUCT_AML_SECUREBOOT_USERKEY)
 endif# PRODUCT_AML_SECURE_BOOT_VERSION3 := true
 
-########################################################################
-#
-#                           Kernel Arch
-#
-########################################################################
-#KERNEL_A32_SUPPORT := false
-ifndef KERNEL_A32_SUPPORT
-KERNEL_A32_SUPPORT := true
-endif
+BOARD_COMPILE_ATV := true
 
 ########################################################################
 #
@@ -259,10 +274,10 @@ endif
 
 ifeq ($(AB_OTA_UPDATER),true)
 PRODUCT_COPY_FILES += \
-    device/khadas/$(PRODUCT_DIR)/fstab.ab.amlogic:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.amlogic
+    device/amlogic/$(PRODUCT_DIR)/fstab.ab.amlogic:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.amlogic
 else
 PRODUCT_COPY_FILES += \
-    device/khadas/$(PRODUCT_DIR)/fstab.system.amlogic:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.amlogic
+    device/amlogic/$(PRODUCT_DIR)/fstab.system.amlogic:$(TARGET_COPY_OUT_VENDOR)/etc/fstab.amlogic
 endif
 
 #########################################################################
@@ -271,10 +286,14 @@ endif
 #
 #########################################################################
 
-WIFI_MODULE := multiwifi
-#WIFI_MODULE := BCMWIFI
-#WIFI_BUILD_IN := true
-include hardware/amlogic/wifi/configs/wifi.mk
+#MULTI_WIFI_SUPPORT := true
+WIFI_MODULE := BCMWIFI
+WIFI_BUILD_IN := true
+include device/amlogic/common/wifi.mk
+
+# Change this to match target country
+# 11 North America; 14 Japan; 13 rest of world
+PRODUCT_DEFAULT_WIFI_CHANNELS := 11
 
 #########################################################################
 #
@@ -283,22 +302,27 @@ include hardware/amlogic/wifi/configs/wifi.mk
 #########################################################################
 
 BOARD_HAVE_BLUETOOTH := true
+BCM_BLUETOOTH_LPM_ENABLE := true
 BLUETOOTH_MODULE := BCMBT
-include hardware/amlogic/bluetooth/configs/bluetooth.mk
-
+include device/amlogic/common/bluetooth.mk
 
 #########################################################################
 #
 #                                                ConsumerIr
 #
 #########################################################################
+PRODUCT_PACKAGES += \
+    consumerir.amlogic
+    #consumerir.amlogic \
+    #SmartRemote
 
-#PRODUCT_PACKAGES += \
-#    consumerir.amlogic \
-#    SmartRemote
-#PRODUCT_COPY_FILES += \
-#    frameworks/native/data/etc/android.hardware.consumerir.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.consumerir.xml
+PRODUCT_COPY_FILES += \
+    frameworks/native/data/etc/android.hardware.consumerir.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.consumerir.xml
 
+#consumerir hal
+PRODUCT_PACKAGES += \
+    android.hardware.ir@1.0-impl \
+    android.hardware.ir@1.0-service
 
 #PRODUCT_PACKAGES += libbt-vendor
 
@@ -314,7 +338,7 @@ PRODUCT_COPY_FILES += \
 # Audio
 #
 BOARD_ALSA_AUDIO=tiny
-include device/khadas/common/audio.mk
+include device/amlogic/common/audio.mk
 
 #########################################################################
 #
@@ -322,11 +346,8 @@ include device/khadas/common/audio.mk
 #
 #########################################################################
 
-ifneq ($(TARGET_BUILD_CTS), true)
 PRODUCT_COPY_FILES += \
-    frameworks/native/data/etc/android.hardware.camera.front.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.camera.front.xml \
-    frameworks/native/data/etc/android.hardware.camera.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.camera.xml
-endif
+    frameworks/native/data/etc/android.hardware.camera.external.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.camera.external.xml
 
 
 
@@ -341,10 +362,53 @@ endif
 #
 #                                                Verimatrix DRM
 ##########################################################################
-#verimatrix web
-BUILD_WITH_VIEWRIGHT_WEB := false
-#verimatrix stb
-BUILD_WITH_VIEWRIGHT_STB := false
+#BOARD_BUILD_VMX_DRM := true
+ifeq ($(BOARD_BUILD_VMX_DRM),true)
+#verimatrix web client
+BUILD_WITH_VIEWRIGHT_WEB := true
+#verimatrix iptv client
+BUILD_WITH_VIEWRIGHT_IPTV := true
+#verimatrix dvb client
+BUILD_WITH_VIEWRIGHT_DVB := false
+
+#use Development lib or Production lib for IPTV client only
+BUILD_WITH_DEV_LIB := true
+TARGET_USE_OPTEEOS := true
+VMX_CHIP_FAMILY := m9d2
+
+
+ifeq ($(BUILD_WITH_VIEWRIGHT_WEB),true)
+  PRODUCT_PACKAGES += libViewRightWebClient  \
+			acbe4b66-6e40-46dc-a2fe-a576922cf170  \
+			7a60371e-5af8-426c-be15-113d794238d4
+
+endif
+
+ifeq ($(BUILD_WITH_VIEWRIGHT_IPTV),true)
+  ifeq ($(BUILD_WITH_DEV_LIB),true)
+    PRODUCT_PACKAGES += libvriptvclientDEV
+  else
+    PRODUCT_PACKAGES += libvriptvclient
+  endif
+  PRODUCT_PACKAGES += libvmlogger 
+  PRODUCT_PACKAGES += 37eb0e02-c43d-48a8-a129-a95dd3d43929 \
+                      7a60371e-5af8-426c-be15-113d794238d4
+endif
+
+#PRODUCT_COPY_FILES += \
+#     vendor/verimatrix/tdk/$(VMX_CHIP_FAMILY)/libteec.so:$(TARGET_COPY_OUT_VENDOR)/lib/libteec.so
+PRODUCT_COPY_FILES += \
+	vendor/verimatrix/$(VMX_CHIP_FAMILY)/tdk/libteec.so:$(TARGET_COPY_OUT_SYSTEM)/lib/libteec.so \
+	vendor/verimatrix/$(VMX_CHIP_FAMILY)/tdk/libteec.so:$(TARGET_COPY_OUT_VENDOR)/lib/libteec.so
+
+ifeq ($(BUILD_WITH_VIEWRIGHT_DVB),true)
+  PRODUCT_PACKAGES += 37eb0e02-c43d-48a8-a129-a95dd3d43929 \
+                      cb4066f7-e18f-4fb9-b6b1-9511bd319ebc
+
+  #testbin
+  PRODUCT_PACKAGES += vmx_dvb_test vmx_indiv
+endif
+endif
 #########################################################################
 
 
@@ -360,26 +424,7 @@ TARGET_ENABLE_TA_SIGN := true
 TARGET_USE_HW_KEYMASTER := true
 endif
 
-#########################################################################
-#
-#                                                Miracast Application
-##########################################################################
-#Miracast Function
-BUILD_WITH_MIRACAST := true
-ifeq ($(BUILD_WITH_MIRACAST),)
-BUILD_WITH_MIRACAST := false
-endif
-
-ifeq ($(BUILD_WITH_MIRACAST), true)
-BUILD_WITH_MIRACAST := true
-ifeq ($(BUILD_WITH_MIRACAST_HDCP),true)
-TARGET_USE_OPTEEOS := true
-BUILD_WITH_MIRACAST_HDCP := true
-endif
-endif
-#########################################################################
-
-$(call inherit-product, device/khadas/common/media.mk)
+$(call inherit-product, device/amlogic/common/media.mk)
 
 #########################################################################
 #
@@ -427,26 +472,16 @@ BUILD_WITH_LOWMEM_COMMON_CONFIG := true
 
 BOARD_USES_USB_PM := true
 
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/Third_party_apk_camera.xml:$(TARGET_COPY_OUT_VENDOR)/etc/Third_party_apk_camera.xml \
 
-include device/khadas/common/software.mk
+include device/amlogic/common/software.mk
+ifeq ($(TARGET_BUILD_GOOGLE_ATV),true)
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.sf.lcd_density=280
-
-
-#########################################################################
-#
-#                                    Khadas Build Config
-#
-#########################################################################
-BUILD_WITH_GAPPS_CONFIG := false
-
-
-#Khadas OTA
+    ro.sf.lcd_density=320
+else
 PRODUCT_PROPERTY_OVERRIDES += \
-   ro.product.firmware=00900002 \
-   ro.product.otaupdateurl=http://dl.khadas.com:8089/otaupdate/update
+    ro.sf.lcd_density=240
+endif
+
 
 #########################################################################
 #
@@ -493,24 +528,18 @@ endif
 #                                     TB detect
 #
 #########################################################################
-$(call inherit-product, device/khadas/common/tb_detect.mk)
+$(call inherit-product, device/amlogic/common/tb_detect.mk)
 
-include device/khadas/common/gpu/dvalin-user-arm64.mk
-#####npu ovx service
-#ifeq ($(BOARD_NPU_SERVICE_ENABLE), true)
-PRODUCT_PACKAGES += android.hardware.neuralnetworks@1.1-service-ovx-driver
-PRODUCT_PACKAGES += \
-    libCLC \
-	libGAL \
-	libLLVM_viv \
-	libNNVXCBinary \
-	libOpenCL \
-	libOpenVX \
-	libOpenVXU \
-	libovxlib \
-	libVSC \
-	libOvx12VXCBinary
-#endif
+include device/amlogic/common/gpu/dvalin-user-arm64.mk
+
+#########################################################################
+#
+#                                     Auto Patch
+#                          must put in the end of mk files
+#########################################################################
+AUTO_PATCH_SHELL_FILE := vendor/amlogic/common/tools/auto_patch/auto_patch.sh
+AUTO_PATCH_AB := vendor/amlogic/common/tools/auto_patch/auto_patch_ab.sh
+HAVE_WRITED_SHELL_FILE := $(shell test -f $(AUTO_PATCH_SHELL_FILE) && echo yes)
 
 ifneq ($(TARGET_BUILD_LIVETV),true)
 TARGET_BUILD_LIVETV := false

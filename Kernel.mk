@@ -11,52 +11,82 @@ INSTALLED_BOARDDTB_TARGET := $(PRODUCT_OUT)/dt.img
 ifeq ($(PRODUCT_BUILD_SECURE_BOOT_IMAGE_DIRECTLY),true)
 	INSTALLED_BOARDDTB_TARGET := $(INSTALLED_BOARDDTB_TARGET).encrypt
 endif# ifeq ($(PRODUCT_BUILD_SECURE_BOOT_IMAGE_DIRECTLY),true)
-ifeq ($(USE_PREBUILT_KERNEL),true)
-TARGET_PREBUILT_KERNEL := $(LOCAL_PATH)/kernel
+
+ifneq ($(TARGET_KERNEL_BUILT_FROM_SOURCE), true)
+TARGET_PREBUILT_KERNEL := device/amlogic/franklin-kernel/Image.gz
+LOCAL_DTB := device/amlogic/franklin-kernel/franklin.dtb
+
+$(TARGET_PREBUILT_KERNEL): $(INSTALLED_BOARDDTB_TARGET)
+	@echo "cp kernel modules"
+	mkdir -p $(PRODUCT_OUT)/root/boot
+	mkdir -p $(PRODUCT_OUT)/vendor/lib/firmware/video
+	mkdir -p $(PRODUCT_OUT)/obj/lib
+	mkdir -p $(PRODUCT_OUT)/obj/KERNEL_OBJ/
+	mkdir -p $(PRODUCT_OUT)/recovery/root/boot
+	mkdir -p $(KERNEL_KO_OUT)
+	cp device/amlogic/franklin-kernel/lib/mali.ko $(PRODUCT_OUT)/vendor/lib/
+	cp device/amlogic/franklin-kernel/lib/modules/* $(KERNEL_KO_OUT)/
+	cp device/amlogic/franklin-kernel/lib/optee_armtz.ko $(PRODUCT_OUT)/vendor/lib/
+	cp device/amlogic/franklin-kernel/lib/optee.ko $(PRODUCT_OUT)/vendor/lib/
+	cp device/amlogic/franklin-kernel/lib/firmware/video/* $(PRODUCT_OUT)/vendor/lib/firmware/video/
+	-cp device/amlogic/franklin-kernel/obj/KERNEL_OBJ/vmlinux $(PRODUCT_OUT)/obj/KERNEL_OBJ/
+	mkdir -p $(PRODUCT_OUT)/$(TARGET_COPY_OUT_VENDOR)/lib/modules/
+	cp $(KERNEL_KO_OUT)/* $(PRODUCT_OUT)/$(TARGET_COPY_OUT_VENDOR)/lib/modules/
+	mkdir -p $(PRODUCT_OUT)/vendor/lib/egl
+	cp device/amlogic/franklin-kernel/lib/egl/* $(PRODUCT_OUT)/vendor/lib/egl/
 
 $(INSTALLED_KERNEL_TARGET): $(TARGET_PREBUILT_KERNEL) | $(ACP)
 	@echo "Kernel installed"
 	$(transform-prebuilt-to-target)
-	@echo "cp kernel modules"
+
+$(INSTALLED_BOARDDTB_TARGET): $(LOCAL_DTB) | $(ACP)
+	@echo "dtb installed"
+	$(transform-prebuilt-to-target)
+
+$(INSTALLED_2NDBOOTLOADER_TARGET): $(INSTALLED_BOARDDTB_TARGET) $(BOARD_PREBUILT_DTBOIMAGE) | $(ACP)
+	@echo "2ndbootloader installed"
+	$(transform-prebuilt-to-target)
 
 else
 
--include device/khadas/common/gpu/dvalin-kernel.mk
--include device/khadas/common/media_modules.mk
--include hardware/amlogic/wifi/configs/wifi_modules.mk
--include hardware/amlogic/bluetooth/configs/bluetooth_modules.mk
--include device/khadas/common/tb_modules.mk
--include device/khadas/common/npu_modules.mk
+-include device/amlogic/common/gpu/dvalin-kernel.mk
+-include device/amlogic/common/media_modules.mk
+-include device/amlogic/common/wifi_modules.mk
+-include device/amlogic/common/tb_modules.mk
+-include device/amlogic/common/tuner/tuner_modules.mk
 KERNEL_DEVICETREE := g12a_s905x2_u212
 KERNEL_DEFCONFIG := meson64_defconfig
 KERNEL_ARCH := arm64
 
 DTBO_DEVICETREE := android_p_overlay_dt
 
+WIFI_MODULE := multiwifi
 
 KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
+
+ifndef KERNEL_A32_SUPPORT
+KERNEL_A32_SUPPORT := false
+endif
 
 ifeq ($(KERNEL_A32_SUPPORT), true)
 KERNEL_DEFCONFIG := meson64_a32_defconfig
 KERNEL_ARCH := arm
 INTERMEDIATES_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/uImage
-PREFIX_CROSS_COMPILE=/opt/toolchains/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
+PREFIX_CROSS_COMPILE=/opt/gcc-linaro-6.3.1-2017.02-x86_64_arm-linux-gnueabihf/bin/arm-linux-gnueabihf-
 BUILD_CONFIG := $(KERNEL_DEFCONFIG)
 else
 KERNEL_DEFCONFIG := meson64_defconfig
 KERNEL_ARCH := arm64
 INTERMEDIATES_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/Image.gz
-PREFIX_CROSS_COMPILE=/opt/toolchains/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
-BUILD_CONFIG := $(KERNEL_DEFCONFIG)
-endif
-
+PREFIX_CROSS_COMPILE=/opt/gcc-linaro-6.3.1-2017.02-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
 # COMPILE CHECK FOR KASAN
 ifeq ($(ENABLE_KASAN), true)
 CONFIG_DIR := $(KERNEL_ROOTDIR)/arch/$(KERNEL_ARCH)/configs/
 KASAN_DEFCONFIG := kasan_defconfig
 BUILD_CONFIG := $(KASAN_DEFCONFIG)
-$(shell cat $(CONFIG_DIR)/$(KERNEL_DEFCONFIG) > $(CONFIG_DIR)/$(KASAN_DEFCONFIG))
-$(shell cat device/khadas/common/kasan.cfg >> $(CONFIG_DIR)/$(KASAN_DEFCONFIG))
+else
+BUILD_CONFIG := $(KERNEL_DEFCONFIG)
+endif
 endif
 
 KERNEL_CONFIG := $(KERNEL_OUT)/.config
@@ -66,10 +96,10 @@ TARGET_AMLOGIC_INT_RECOVERY_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/Ima
 BOARD_VENDOR_KERNEL_MODULES += \
 	$(PRODUCT_OUT)/obj/lib_vendor/ddr_window_64.ko
 
-BOARD_VENDOR_KERNEL_MODULES	+= $(DEFAULT_MEDIA_KERNEL_MODULES)
+BOARD_VENDOR_KERNEL_MODULES += $(DEFAULT_MEDIA_KERNEL_MODULES)
 BOARD_VENDOR_KERNEL_MODULES += $(DEFAULT_WIFI_KERNEL_MODULES)
 BOARD_VENDOR_KERNEL_MODULES += $(DEFAULT_TB_DETECT_KERNEL_MODULES)
-BOARD_VENDOR_KERNEL_MODULES += $(PRODUCT_OUT)/obj/lib_vendor/galcore.ko
+
 WIFI_OUT  := $(TARGET_OUT_INTERMEDIATES)/hardware/wifi
 
 define cp-modules
@@ -85,6 +115,11 @@ endef
 
 $(KERNEL_OUT):
 	mkdir -p $(KERNEL_OUT)
+ifeq ($(ENABLE_KASAN), true)
+	@echo "KASAN enabled, generate new config"
+	cat $(CONFIG_DIR)/$(KERNEL_DEFCONFIG) > $(CONFIG_DIR)/$(KASAN_DEFCONFIG)
+	cat device/amlogic/common/kasan.cfg >> $(CONFIG_DIR)/$(KASAN_DEFCONFIG)
+endif
 
 $(KERNEL_CONFIG): $(KERNEL_OUT)
 	$(MAKE) -C $(KERNEL_ROOTDIR) O=../$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(PREFIX_CROSS_COMPILE) $(BUILD_CONFIG)
@@ -99,12 +134,10 @@ else
 endif
 #	$(MAKE) -C $(shell pwd)/$(PRODUCT_OUT)/obj/KERNEL_OBJ M=$(shell pwd)/hardware/amlogic/thermal/ ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(PREFIX_CROSS_COMPILE) modules
 	#$(gpu-modules)
-	$(MAKE) KERNEL_ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(PREFIX_CROSS_COMPILE) -f hardware/amlogic/wifi/configs/wifi_driver.mk $(WIFI_MODULE)
-	$(MAKE) KERNEL_ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(PREFIX_CROSS_COMPILE) -f hardware/amlogic/bluetooth/configs/bluetooth_driver.mk BLUETOOTH_INF=$(BLUETOOTH_INF) $(BLUETOOTH_MODULE)
+	$(MAKE) KERNEL_ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(PREFIX_CROSS_COMPILE) -f device/amlogic/common/wifi_driver.mk $(WIFI_MODULE)
 	$(tb-modules)
 	$(cp-modules)
 	$(media-modules)
-	$(npu-modules)
 	mkdir -p $(PRODUCT_OUT)/$(TARGET_COPY_OUT_VENDOR)/lib/modules/
 	cp $(KERNEL_KO_OUT)/* $(PRODUCT_OUT)/$(TARGET_COPY_OUT_VENDOR)/lib/modules/
 

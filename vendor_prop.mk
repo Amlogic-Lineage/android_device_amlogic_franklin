@@ -1,4 +1,5 @@
 # Copyright (C) 2011 Amlogic Inc
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -33,16 +34,21 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.media.camera_preview.limitedrate=1920x1080x30,1280x720x30,640x480x30,320x240x28 \
     ro.media.camera_preview.usemjpeg=1
 
+#for bt auto connect
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.vendor.autoconnectbt.isneed=false \
+    ro.vendor.autoconnectbt.macprefix=00:CD:FF \
+    ro.vendor.autoconnectbt.btclass=50c \
+    ro.vendor.autoconnectbt.nameprefix=Amlogic_RC \
+    ro.vendor.autoconnectbt.rssilimit=70
+
 #if wifi Only
-PRODUCT_PROPERTY_OVERRIDES +=  \
+PRODUCT_PROPERTY_OVERRIDES += \
     ro.radio.noril=false
 
 #if need pppoe
-PRODUCT_PROPERTY_OVERRIDES +=  \
-    ro.net.pppoe=true
-
 PRODUCT_PROPERTY_OVERRIDES += \
-   ro.vendor.platform.support.dolbyvision=true
+    ro.net.pppoe=true
 
 #the prop is used for enable or disable
 #DD+/DD force output when HDMI EDID is not supported
@@ -67,49 +73,94 @@ PRODUCT_PROPERTY_OVERRIDES += \
 #DTS-HD prop end
 # Enable player buildin
 
+
 PRODUCT_PROPERTY_OVERRIDES += \
     media.support.dolbyvision = true
 
 #add for video boot, 1 means use video boot, others not .
-PRODUCT_PROPERTY_OVERRIDES +=  \
+PRODUCT_PROPERTY_OVERRIDES += \
     service.bootvideo=0
 
 # Define drm for this device
-PRODUCT_PROPERTY_OVERRIDES +=  \
+PRODUCT_PROPERTY_OVERRIDES += \
     drm.service.enabled=1
 
+#used forward seek for libplayer
+PRODUCT_PROPERTY_OVERRIDES += \
+    media.libplayer.seek.fwdsearch=1
 #set memory upper limit for extractor process
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.media.maxmem=629145600
 
+#fix hls sync
+PRODUCT_PROPERTY_OVERRIDES += \
+    libplayer.livets.softdemux=1 \
+    libplayer.netts.recalcpts=1
+
 #map volume
-PRODUCT_PROPERTY_OVERRIDES +=  \
+PRODUCT_PROPERTY_OVERRIDES += \
     ro.audio.mapvalue=0,0,0,0
 
+#By default, primary storage is physical
+PRODUCT_PROPERTY_OVERRIDES += \
+    #ro.vold.primary_physical=true
+
+#Support storage visible to apps
+PRODUCT_PROPERTY_OVERRIDES += \
+    persist.fw.force_adoptable=true
+
+#use sdcardfs
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.sys.sdcardfs=true
+
+#add livhls,libcurl as default hls
+PRODUCT_PROPERTY_OVERRIDES += \
+    media.libplayer.curlenable=true \
+    media.libplayer.modules=vhls_mod,dash_mod,curl_mod,prhls_mod,vm_mod,bluray_mod
+
+
+#Hdmi In
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.sys.hdmiin.enable=true \
+    mbx.hdmiin.switchfull=false \
+    mbx.hdmiin.videolayer=false
+
 #adb
-PRODUCT_PROPERTY_OVERRIDES +=  \
+PRODUCT_PROPERTY_OVERRIDES += \
     service.adb.tcp.port=5555
 
+#enable/disable afbc
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.afbcd.enable=1
+
+# low memory for 1G
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.config.low_ram=true
+
 # crypto volume
-PRODUCT_PROPERTY_OVERRIDES +=  \
+PRODUCT_PROPERTY_OVERRIDES += \
     ro.crypto.volume.filenames_mode=aes-256-cts
 
-
-# Low memory platform
-PRODUCT_PROPERTY_OVERRIDES +=  \
-    ro.config.low_ram=true \
-    ro.platform.support.dolbyvision=true
-
-#enable/disable afbc
-PRODUCT_PROPERTY_OVERRIDES +=  \
-    vendor.afbcd.enable=0
+# JIT config
+PRODUCT_PROPERTY_OVERRIDES += \
+    dalvik.vm.jit.codecachesize=0
 
 # default enable sdr to hdr
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.vendor.sdr2hdr.enable=true
 
+ifeq ($(TARGET_BUILD_LIVETV),true)
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.vendor.platform.is.tv=1
+
+#disable timeshift
+PRODUCT_PROPERTY_OVERRIDES += \
+    tv.dtv.tf.disable=true
+
+else
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.vendor.platform.is.tv=0
+endif
 
 #bootvideo
 #0                      |050
@@ -123,10 +174,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
 #-----------------------|050
 #050:default volume value, volume range 0~100
 #note that the high position 0 can not be omitted
-ifneq ($(TARGET_BUILD_GOOGLE_ATV), true)
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.vendor.media.bootvideo=0050
-endif
 
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.vendor.platform.hdmi.device_type=4
